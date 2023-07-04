@@ -42,9 +42,6 @@ uninstall() {
         systemctl disable vpnclient
     fi
 
-    # pkill -f "vpnserver"
-    # pkill -f "vpnclient"
-
     rm -rf /etc/systemd/system/vpnserver.service
     rm -rf /etc/systemd/system/vpnclient.service
     systemctl daemon-reload
