@@ -60,7 +60,7 @@ uninstall() {
     mkdir -p /root/.local/share/warp
     echo -n "yes" > /root/.local/share/warp/accepted-tos.txt
 
-    if command -v warp-cli &> /dev/null; then
+    if command -v warp-cli &> /dev/null && systemctl is-active -q warp-svc; then
         warp-cli disconnect
         warp-cli delete
     fi
