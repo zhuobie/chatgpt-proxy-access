@@ -55,34 +55,11 @@ uninstall() {
         rm -rf /etc/network/interfaces.d/softether_vpn
         systemctl restart networking
     fi
-
-    rm -rf /root/.local/share/warp
-    mkdir -p /root/.local/share/warp
-    echo -n "yes" > /root/.local/share/warp/accepted-tos.txt
-
-    if command -v warp-cli &> /dev/null && systemctl is-active -q warp-svc; then
-        warp-cli disconnect
-        warp-cli delete
-    fi
-    if dpkg-query -W -f='${Status}' cloudflare-warp | grep -q "installed"; then
-        systemctl stop warp-svc
-        apt purge -y cloudflare-warp
-    fi
-    rm -rf /etc/apt/sources.list.d/cloudflare-client.list
-    rm -rf /root/.local/share/warp
-    
-    if dpkg-query -W -f='${Status}' tinyproxy | grep -q "installed"; then
-        systemctl stop tinyproxy
-        apt purge -y tinyproxy
-    fi
     
     apt autoremove -y
 
     if ufw status | grep -q "$vpn_server_port"; then
         ufw delete allow $vpn_server_port/tcp
-    fi
-    if ufw status | grep -q "$tinyproxy_port"; then
-        ufw delete allow $tinyproxy_port/tcp
     fi
     ufw reload > /dev/null 2>&1
 }
@@ -163,30 +140,7 @@ install() {
     fi
     /opt/vpnserver/vpncmd localhost /SERVER /CMD ServerPasswordSet $server_password
 
-    curl https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/cloudflare-client.list
-    apt-get update && apt-get install -y cloudflare-warp
-    systemctl start warp-svc
-    mkdir -p /root/.local/share/warp
-    echo -n "yes" > /root/.local/share/warp/accepted-tos.txt
-    warp-cli register
-    warp-cli set-mode proxy
-    warp-cli connect
-
-    apt install -y tinyproxy && chown -R tinyproxy:tinyproxy /var/log/tinyproxy && systemctl restart tinyproxy
-    line_number=$(grep -n "Upstream http some.remote.proxy:port" "/etc/tinyproxy/tinyproxy.conf" | cut -d ':' -f 1)
-    if [[ -n "$line_number" ]]; then 
-        sed -i "$((line_number+1))i upstream http 127.0.0.1:40000" "/etc/tinyproxy/tinyproxy.conf"
-    else 
-        exit 1
-    fi
-    sed -i '/192\.168\.0\.0\/16/s/^#//' /etc/tinyproxy/tinyproxy.conf
-    sed -i '/ViaProxyName "tinyproxy"/ s/^/#/' /etc/tinyproxy/tinyproxy.conf
-    sed -i 's/Port 8888/Port '$tinyproxy_port'/g' /etc/tinyproxy/tinyproxy.conf
-    systemctl restart tinyproxy
-
     ufw allow $vpn_server_port/tcp
-    ufw allow $tinyproxy_port/tcp
     ufw reload 
 }
 
@@ -200,18 +154,6 @@ enable() {
     if [[ -f "/etc/systemd/system/vpnclient.service" ]]; then
         systemctl start vpnclient
     fi
-    if [[ ! -f "/root/.local/share/warp/accepted-tos.txt" ]]; then
-        mkdir -p /root/.local/share/warp
-        echo -n "yes" > /root/.local/share/warp/accepted-tos.txt
-    fi
-    if command -v warp-cli &> /dev/null; then
-        systemctl start warp-svc
-        sleep 1
-        warp-cli connect
-    fi
-    if dpkg-query -W -f='${Status}' tinyproxy | grep -q "installed"; then
-        systemctl start tinyproxy
-    fi
 }
 
 disable() {
@@ -220,17 +162,6 @@ disable() {
     fi
     if [[ -f "/etc/systemd/system/vpnclient.service" ]]; then
         systemctl stop vpnclient
-    fi
-    if [[ ! -f "/root/.local/share/warp/accepted-tos.txt" ]]; then
-        mkdir -p /root/.local/share/warp
-        echo -n "yes" > /root/.local/share/warp/accepted-tos.txt
-    fi
-    if command -v warp-cli &> /dev/null; then
-        warp-cli disconnect
-        systemctl stop warp-svc
-    fi
-    if dpkg-query -W -f='${Status}' tinyproxy | grep -q "installed"; then
-        systemctl stop tinyproxy
     fi
 }
 
@@ -260,35 +191,10 @@ status() {
     else 
         echo_status "vpn client process" "NO"
     fi
-    if systemctl is-active -q warp-svc; then
-        echo_status "warp-svc service" "YES"
-    else 
-        echo_status "warp-svc service" "NO"
-    fi
-    if nc -z -w5 localhost 40000; then
-        echo_status "cloudflare warp port" "YES"
-    else 
-        echo_status "cloudflare warp port" "NO"
-    fi
-    if systemctl is-active -q tinyproxy; then
-        echo_status "tinyproxy service" "YES"
-    else 
-        echo_status "tinyproxy service" "NO"
-    fi
-    if nc -z -w5 localhost $tinyproxy_port; then
-        echo_status "tinyproxy port" "YES"
-    else 
-        echo_status "tinyproxy port" "NO"
-    fi
     if ufw status | grep -qE "($vpn_server_port/tcp                   ALLOW       Anywhere)|(Status: inactive)"; then 
         echo_status "firewall for vpn server" "YES"
     else 
         echo_status "firewall for vpn server" "NO"
-    fi
-    if ufw status | grep -qE "($tinyproxy_port/tcp                   ALLOW       Anywhere)|(Status: inactive)"; then 
-        echo_status "firewall for tinyproxy" "YES"
-    else 
-        echo_status "firewall for tinyproxy" "NO"
     fi
     echo "=============================="
 }
