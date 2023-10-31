@@ -27,6 +27,8 @@ fi
 
 uninstall() {
     if [[ -f "/etc/systemd/system/vpnclient.service" ]]; then
+        systemctl start vpnclient
+        /opt/vpnclient/vpncmd localhost /CLIENT /CMD NicDelete vpn
         systemctl stop vpnclient
         systemctl disable vpnclient
     fi
