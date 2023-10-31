@@ -308,6 +308,6 @@ elif [[ "$command_arg" == "enable" ]]; then
 elif [[ "$command_arg" == "disable" ]]; then
     disable
 else 
-    echo "Usage: $0 install|uninstall|status|enable|disable"
+    echo "Usage: $0 install | uninstall | status | enable | disable"
     exit 0
 fi

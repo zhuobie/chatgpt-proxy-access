@@ -12,10 +12,10 @@ Shell scripts that can assist in deploying SoftEther VPN server and client.
 
 System requirements: Debian 12(bookworm)
 
-- ./chatgpt_proxy_access.sh status|install|uninstall|enable|disable
+- ./chatgpt_proxy_access.sh status | install | uninstall | enable | disable
 
-- ./server_deploy.sh status|install|uninstall|enable|disable
+- ./server_deploy.sh status | install | uninstall | enable | disable
 
-- ./client_deploy.sh status|install|uninstall|enable|disable
+- ./client_deploy.sh status | install | uninstall | enable | disable
 
 If necessary, you can modify the global variables in the shell script to make it meet your requirements.
